@@ -269,6 +269,7 @@ namespace AutoAdjust
             if (error_code == 1)
             {
                 Console.WriteLine("未连接至VPN服务器！请检查原因，然后重启程序");
+                Console.ReadKey();
             }
         }
 
@@ -293,21 +294,18 @@ namespace AutoAdjust
             }
 
             //获取窗体大小
-            NativeRECT wndRec, menuRec, menuFileSaveRec;
+            NativeRECT wndRec, menuRec_adjust, menuFileSaveRec;
             Point wndPos = new Point();
             Point menPos = new Point();
             Point menuFileSavePos = new Point();
             IntPtr ptrMenuEdit = GetSubMenu(ptrMenu, 1);
             numMenus = GetMenuItemCount(ptrMenuEdit);//菜单包含的子条目
-            bool isOK = GetMenuItemRect(ptr_cosa, ptrMenu, 1, out menuRec); //获取菜单"平差"选项（参数1）的位置
+            bool isOK = GetMenuItemRect(ptr_cosa, ptrMenu, 1, out menuRec_adjust); //获取菜单"平差"选项（参数1）的位置
             if (!isOK)
             {
                 throw new Win32Exception();
             }
-            menPos.X = (menuRec.right + menuRec.left) / 2;
-            menPos.Y = (menuRec.top + menuRec.bottom) / 2;
-            SetCursorPos(menPos.X, menPos.Y);
-            mouse_event(MouseEventFlag.LeftDown | MouseEventFlag.LeftUp, 0, 0, 1, UIntPtr.Zero);//模拟单击
+            //Mouse_Click(menuRec_adjust);
             Thread.Sleep(500);
 
             uint id_edit_find = GetMenuItemID(ptrMenuEdit, 0);//找到"平差"→"平面网"的位置
@@ -339,7 +337,7 @@ namespace AutoAdjust
                     break;
                 }
             }
-            Thread.Sleep(2500);
+            Thread.Sleep(1000);
 
             IntPtr ptrFinishWindow = FindWindow("#32770", "平面网平差 COSAWIN98");
             IntPtr ptrFinishButton = FindWindowEx(ptrFinishWindow, IntPtr.Zero, "Button", "确定");
@@ -356,29 +354,36 @@ namespace AutoAdjust
             Boolean isInit = false;
             try
             {
-                IntPtr ptr_cosa = FindWindow(null, "COSAWIN98－控制测量数据处理通用软件包(CODAPS)" + " - " + ou2_name + ".ou2");
-                int numMenus = GetMenuItemCount(ptr_cosa);
+                IntPtr ptr_cosa = FindWindow(null, "COSAWIN98－控制测量数据处理通用软件包(CODAPS) - " + ou2_name + ".ou2");
+                //COSAWIN98－控制测量数据处理通用软件包(CODAPS) - trytry.ou2
+                IntPtr ptrMenu = GetMenu(ptr_cosa);
+                //int numMenus = GetMenuItemCount(ptrMenu);
 
                 //获取窗体大小
-                NativeRECT wndRec, menuRec, menuFileSaveRec;
+                NativeRECT wndRec, menuRec_file, menuFileSaveRec;
                 Point wndPos = new Point();
-                Point menPos = new Point();
                 Point menuFileSavePos = new Point();
-                IntPtr ptr_cosaEdit = GetSubMenu(ptr_cosa, 1);
-                numMenus = GetMenuItemCount(ptr_cosaEdit);//菜单包含的子条目
-                bool isOK = GetMenuItemRect(ptr_cosa, ptr_cosa, 0, out menuRec); //获取菜单"文件"选项（参数1）的位置
+                //IntPtr ptr_cosaEdit = GetSubMenu(ptrMenu, 1);
+                //numMenus = GetMenuItemCount(ptr_cosaEdit);//菜单包含的子条目
+                bool isOK = GetMenuItemRect(ptr_cosa, ptrMenu, 0, out menuRec_file); //获取菜单"文件"选项（参数1）的位置
                 if (!isOK)
                 {
                     throw new Win32Exception();
                 }
-                menPos.X = (menuRec.right + menuRec.left) / 2;
-                menPos.Y = (menuRec.top + menuRec.bottom) / 2;
-                SetCursorPos(menPos.X, menPos.Y);
-                mouse_event(MouseEventFlag.LeftDown | MouseEventFlag.LeftUp, 0, 0, 1, UIntPtr.Zero);//模拟单击
+                Mouse_Click(menuRec_file);
                 Thread.Sleep(500);
 
-                uint id_edit_find = GetMenuItemID(ptr_cosaEdit, 2);//找到"文件"→"关闭"的位置
-                PostMessage(ptr_cosa, 0x0111, (int)id_edit_find, 0);//点击"关闭"
+                //uint id_edit_find = GetMenuItemID(ptr_cosaEdit, 2);//找到"文件"→"关闭"的位置
+                //PostMessage(ptr_cosa, 0x0111, (int)id_edit_find, 0);//点击"关闭"
+                //警告：对于点击后不弹出窗口的选项，即后面不带“...”的选项，不能使用PostMessage
+                NativeRECT menuRec_close;
+                IntPtr ptrMenuFile = GetSubMenu(ptrMenu, 0);
+                isOK = GetMenuItemRect(ptr_cosa, ptrMenuFile, 2, out menuRec_close);
+                if (!isOK)
+                {
+                    throw new Win32Exception();
+                }
+                Mouse_Click(menuRec_close);
                 Thread.Sleep(500);
 
                 isInit = true;
@@ -388,6 +393,15 @@ namespace AutoAdjust
             }
 
             return isInit;
+        }
+
+        private static void Mouse_Click(NativeRECT menuRec)
+        {
+            Point menPos = new Point();
+            menPos.X = (menuRec.right + menuRec.left) / 2;
+            menPos.Y = (menuRec.top + menuRec.bottom) / 2;
+            SetCursorPos(menPos.X, menPos.Y);
+            mouse_event(MouseEventFlag.LeftDown | MouseEventFlag.LeftUp, 0, 0, 1, UIntPtr.Zero);//模拟单击
         }
 
         public static IPAddress GetVPN_IPAddress(String name)
