@@ -94,23 +94,23 @@ namespace AutoAdjust
             var utf8WithoutBom = new System.Text.UTF8Encoding(false);
 
             // 0.打开科傻平差软件的.exe文件
-            //System.Diagnostics.Process ps;
-            //try
-            //{
-            //    ps = new System.Diagnostics.Process();
-            //    ps.StartInfo.FileName = "D:/科傻平差软件/Cosawin.exe";
-            //    ps.StartInfo.UseShellExecute = false;
-            //    ps.StartInfo.RedirectStandardInput = true;
-            //    ps.StartInfo.RedirectStandardOutput = true;
-            //    ps.StartInfo.Verb = "runas";
-            //    ps.Start();
-            //}
-            //catch
-            //{
-            //    ps = null;
-            //    Console.WriteLine("无法启动cosa程序！");
-            //}
-            //Thread.Sleep(2000);
+            System.Diagnostics.Process ps;
+            try
+            {
+                ps = new System.Diagnostics.Process();
+                ps.StartInfo.FileName = "D:/科傻平差软件/Cosawin.exe";
+                ps.StartInfo.UseShellExecute = false;
+                ps.StartInfo.RedirectStandardInput = true;
+                ps.StartInfo.RedirectStandardOutput = true;
+                ps.StartInfo.Verb = "runas";
+                ps.Start();
+            }
+            catch
+            {
+                ps = null;
+                Console.WriteLine("无法启动cosa程序！");
+            }
+            Thread.Sleep(1000);
 
             int error_code = 0;
 
@@ -148,8 +148,8 @@ namespace AutoAdjust
 
                 // 2.调用accept()等待客户端连接
                 Console.WriteLine("服务端已就绪，等待客户端接入，服务端ip地址:{0}。等待接收in2文件......\n", server_ip);
-                Socket socket = serverSocket.Accept();
-                String client_ip = socket.RemoteEndPoint.ToString();
+                Socket socket_connected = serverSocket.Accept();
+                String client_ip = socket_connected.RemoteEndPoint.ToString();
                 Console.WriteLine("客户端已找到！IP地址为{0}", client_ip);
                 Console.WriteLine("连接已经建立......\n");
 
@@ -157,7 +157,7 @@ namespace AutoAdjust
                 try
                 {
                     //通过Socket接收数据  
-                    int receiveNumber = socket.Receive(result);
+                    int receiveNumber = socket_connected.Receive(result);
                     //Console.WriteLine("接收客户端{0}消息{1}", null, Encoding.ASCII.GetString(result, 0, receiveNumber));
                     content = Encoding.ASCII.GetString(result, 0, receiveNumber);
                     Console.WriteLine("客户端：{0}", content);
@@ -169,8 +169,8 @@ namespace AutoAdjust
                         Console.WriteLine("IOException source: {0}", ex.Source);
                     }
                     //Console.WriteLine(ex.Message);
-                    socket.Shutdown(SocketShutdown.Both);
-                    socket.Close();
+                    socket_connected.Shutdown(SocketShutdown.Both);
+                    socket_connected.Close();
                 }
 
                 // 4.将信息写入到文件中
@@ -210,7 +210,7 @@ namespace AutoAdjust
                     }
                 }
                 sw.Close();
-                socket.Close();
+                socket_connected.Close();
                 serverSocket.Close();
 
                 // 5.在科傻软件中进行平差
@@ -219,20 +219,17 @@ namespace AutoAdjust
                 {
                     Console.WriteLine("平差完毕！已生成.ou2文件!");
                 }
+                ////反馈“平差成功”的讯息
+                Byte[] check_result = Encoding.UTF8.GetBytes("checked");
+                Socket socket_check = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                socket_check.Bind(new IPEndPoint(server_ip, 8886));
+                socket_check.Listen(10);
+                Socket socket_temp = socket_check.Accept();
+                socket_temp.Send(check_result, check_result.Length, SocketFlags.None);
+                Console.WriteLine("已发送反馈信息\r\n");
+                socket_temp.Close();socket_check.Close();
 
                 // 6.传回结果文件
-                //IPEndPoint ipep = new IPEndPoint(IPAddress.Any, 54321);
-                //Socket serverSocket2 = new Socket(ipep.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                //serverSocket2.Bind(ipep);
-                //serverSocket.Listen(10);
-                //Socket socket2 = serverSocket2.Accept(); 
-
-                Socket serverSocket2 = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                serverSocket2.Bind(new IPEndPoint(server_ip, 54321));  //绑定IP地址：端口  
-                serverSocket2.Listen(10);
-                Socket socket2 = serverSocket2.Accept();
-
-
                 Byte[] outBuffer = new Byte[1024];
                 String out_content = "";
 
@@ -243,9 +240,12 @@ namespace AutoAdjust
                 {
                     out_content += line + "\n";
                 }
-
                 outBuffer = Encoding.UTF8.GetBytes(out_content);
 
+                Socket serverSocket2 = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                serverSocket2.Bind(new IPEndPoint(server_ip, 54321));  //绑定IP地址：端口  
+                serverSocket2.Listen(10);
+                Socket socket2 = serverSocket2.Accept();
                 socket2.Send(outBuffer, outBuffer.Length, SocketFlags.None);
                 Console.WriteLine("服务器向客户端发送{0}.ou2成功\r\n\r\n", name);
 
@@ -281,9 +281,13 @@ namespace AutoAdjust
 
             IntPtr ptr_cosa = FindWindow(null, "COSAWIN98－控制测量数据处理通用软件包(CODAPS)");
             if (ptr_cosa != IntPtr.Zero)
-                Console.WriteLine("已找到cosa窗口！");
+            {
+                //Console.WriteLine("已找到cosa窗口！");
+            }
             else
+            {
                 Console.WriteLine("未找到cosa窗口！");
+            }
             Thread.Sleep(500);
 
             IntPtr ptrMenu = GetMenu(ptr_cosa);
@@ -328,7 +332,7 @@ namespace AutoAdjust
                 if (ptrPositiveButton != IntPtr.Zero)
                 {
                     i = SendMessage(ptrPositiveButton, BM_CLICK, 0, "");
-                    Console.WriteLine("Button:是(&Y)");
+                    //Console.WriteLine("Button:是(&Y)");
                     Thread.Sleep(1000);
                     break;
                 }
