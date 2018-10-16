@@ -161,6 +161,9 @@ namespace AutoAdjust
                     //Console.WriteLine("接收客户端{0}消息{1}", null, Encoding.ASCII.GetString(result, 0, receiveNumber));
                     content = Encoding.ASCII.GetString(result, 0, receiveNumber);
                     Console.WriteLine("客户端：{0}", content);
+
+                    serverSocket.Close();
+                    socket_connected.Close();
                 }
                 catch (Exception ex)
                 {
@@ -210,8 +213,6 @@ namespace AutoAdjust
                     }
                 }
                 sw.Close();
-                socket_connected.Close();
-                serverSocket.Close();
 
                 // 5.在科傻软件中进行平差
                 String file_ou2 = Auto_adjust(name, filename_in2);
@@ -219,15 +220,16 @@ namespace AutoAdjust
                 {
                     Console.WriteLine("平差完毕！已生成.ou2文件!");
                 }
-                ////反馈“平差成功”的讯息
+                //反馈“平差成功”的讯息
                 Byte[] check_result = Encoding.UTF8.GetBytes("checked");
                 Socket socket_check = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                socket_check.Bind(new IPEndPoint(server_ip, 8886));
+                socket_check.Bind(new IPEndPoint(server_ip, 12345));
                 socket_check.Listen(10);
                 Socket socket_temp = socket_check.Accept();
                 socket_temp.Send(check_result, check_result.Length, SocketFlags.None);
                 Console.WriteLine("已发送反馈信息\r\n");
-                socket_temp.Close();socket_check.Close();
+                socket_temp.Close();
+                socket_check.Close();
 
                 // 6.传回结果文件
                 Byte[] outBuffer = new Byte[1024];
